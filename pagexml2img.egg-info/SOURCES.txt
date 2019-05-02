@@ -1,7 +1,0 @@
-setup.py
-pagexml2img/__init__.py
-pagexml2img/pagexml2img.py
-pagexml2img.egg-info/PKG-INFO
-pagexml2img.egg-info/SOURCES.txt
-pagexml2img.egg-info/dependency_links.txt
-pagexml2img.egg-info/top_level.txt
