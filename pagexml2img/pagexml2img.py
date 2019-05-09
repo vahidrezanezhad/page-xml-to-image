@@ -42,7 +42,11 @@ class pagexml2img:
         """
 
         if self.output_type=='3d' or self.output_type=='3D':
-            classes=np.array([ [0,0,0],[255,0,0],[0,255,0],[0,0,255]])
+            classes=np.array([ [0,0,0, 1, 0, 0, 0, 0],
+                              [255,0,0, 0, 1, 0, 0, 0],
+                              [0,255,0, 0, 0, 1, 0, 0],
+                              [0,0,255, 0, 0, 0, 1, 0], 
+                              [0,255,255, 0, 0, 0, 0, 1] ])
             
 
             
@@ -51,39 +55,81 @@ class pagexml2img:
                 try:
                     tree1 = ET.parse(self.dir+'/'+self.gt_list[index])
                     root1=tree1.getroot()
-                   
-                   
-                    for jj in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Page'):
+                    alltags=[elem.tag for elem in root1.iter()]
+                    link=alltags[0].split('}')[0]+'}'
+                    
+                    region_tags=np.unique([x for x in alltags if x.endswith('Region')])
+                    
+                    for jj in root1.iter(link+'Page'):
                         y_len=int(jj.attrib['imageHeight'])
                         x_len=int(jj.attrib['imageWidth'])
                    
                     co_text=[]
                     co_sep=[]
                     co_img=[]
-                
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}TextRegion'):
-                        c_t_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_t_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_text.append(np.array(c_t_in))
+                    co_table=[]
+
+                    for tag in region_tags:
+                        if tag.endswith('}TextRegion') or tag.endswith('}Textregion') or tag.endswith('}textRegion') or tag.endswith('}textregion'):
+                            
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_t_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_t_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_text.append(np.array(c_t_in))
+                                        print(co_text)
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_text.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+
                   
-                
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}ImageRegion'):
-                        c_i_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_i_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_img.append(np.array(c_i_in))
-                       
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}SeparatorRegion'):
-                        c_s_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_s_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_sep.append(np.array(c_s_in))
+                        elif tag.endswith('}ImageRegion') or tag.endswith('}Imageregion') or tag.endswith('}imageRegion') or tag.endswith('}imageregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_i_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_i_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_img.append(np.array(c_i_in))
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_img.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                                                                         
+                        elif tag.endswith('}SeparatorRegion') or tag.endswith('}Separatorregion') or tag.endswith('}separatorRegion') or tag.endswith('}separatorregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_s_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_s_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_sep.append(np.array(c_s_in))
+                                        
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_sep.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                                        
+                        elif tag.endswith('}TableRegion') or tag.endswith('}tableRegion') or tag.endswith('}Tableregion') or tag.endswith('}tableregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_ta_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_ta_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_table.append(np.array(c_ta_in))
+                                        
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_table.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                        else:
+                            pass
                        
                     img = np.zeros( (y_len,x_len,3) ) 
                     img_poly=cv2.fillPoly(img, pts =co_text, color=(255,0,0))
                     img_poly=cv2.fillPoly(img, pts =co_img, color=(0,255,0))
                     img_poly=cv2.fillPoly(img, pts =co_sep, color=(0,0,255))
+                    img_poly=cv2.fillPoly(img, pts =co_table, color=(0,255,255))
                     
                     try: 
                         cv2.imwrite(self.output_dir+'/'+self.gt_list[index].split('-')[1].split('.')[0]+'.png',img_poly )
@@ -94,44 +140,85 @@ class pagexml2img:
             np.savetxt(self.output_dir+'/../classes.txt',classes)
     
         if self.output_type=='2d' or self.output_type=='2D':
-            
             for index in tqdm(range(len(self.gt_list))):
                 try:
-                
                     tree1 = ET.parse(self.dir+'/'+self.gt_list[index])
                     root1=tree1.getroot()
-                   
-                    for jj in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Page'):
+                    alltags=[elem.tag for elem in root1.iter()]
+                    link=alltags[0].split('}')[0]+'}'
+                    
+                    region_tags=np.unique([x for x in alltags if x.endswith('Region')])
+                    
+                    for jj in root1.iter(link+'Page'):
                         y_len=int(jj.attrib['imageHeight'])
                         x_len=int(jj.attrib['imageWidth'])
                    
                     co_text=[]
                     co_sep=[]
                     co_img=[]
-                
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}TextRegion'):
-                        c_t_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_t_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_text.append(np.array(c_t_in))
+                    co_table=[]
+
+                    for tag in region_tags:
+                        if tag.endswith('}TextRegion') or tag.endswith('}Textregion') or tag.endswith('}textRegion') or tag.endswith('}textregion'):
+                            
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_t_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_t_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_text.append(np.array(c_t_in))
+                                        print(co_text)
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_text.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+
                   
-                
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}ImageRegion'):
-                        c_i_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_i_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_img.append(np.array(c_i_in))
-                       
-                    for nn in root1.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}SeparatorRegion'):
-                        c_s_in=[]
-                        for ll in nn.iter('{http://schema.primaresearch.org/PAGE/gts/pagecontent/2010-03-19}Point'):
-                            c_s_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
-                        co_sep.append(np.array(c_s_in))
+                        elif tag.endswith('}ImageRegion') or tag.endswith('}Imageregion') or tag.endswith('}imageRegion') or tag.endswith('}imageregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_i_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_i_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_img.append(np.array(c_i_in))
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_img.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                                                                         
+                        elif tag.endswith('}SeparatorRegion') or tag.endswith('}Separatorregion') or tag.endswith('}separatorRegion') or tag.endswith('}separatorregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_s_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_s_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_sep.append(np.array(c_s_in))
+                                        
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_sep.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                                        
+                        elif tag.endswith('}TableRegion') or tag.endswith('}tableRegion') or tag.endswith('}Tableregion') or tag.endswith('}tableregion'):
+                            for nn in root1.iter(tag):
+                                for co_it in nn.iter(link+'Coords'):
+                                    if bool(co_it.attrib)==False:
+                                        c_ta_in=[]
+                                        for ll in nn.iter(link+'Point'):
+                                            c_ta_in.append([ int(np.float(ll.attrib['x'])) , int(np.float(ll.attrib['y'])) ])
+                                        co_table.append(np.array(c_ta_in))
+                                        
+                                    elif bool(co_it.attrib)==True and 'points' in co_it.attrib.keys():
+                                        p_h=co_it.attrib['points'].split(' ')
+                                        co_table.append( np.array( [ [ int(x.split(',')[0]) , int(x.split(',')[1]) ]  for x in p_h] ) )
+                        else:
+                            pass
                        
                     img = np.zeros( (y_len,x_len) ) 
                     img_poly=cv2.fillPoly(img, pts =co_text, color=(1,1,1))
                     img_poly=cv2.fillPoly(img, pts =co_img, color=(2,2,2))
                     img_poly=cv2.fillPoly(img, pts =co_sep, color=(3,3,3))
+                    img_poly=cv2.fillPoly(img, pts =co_table, color=(4,4,4))
                     try: 
                         cv2.imwrite(self.output_dir+'/'+self.gt_list[index].split('-')[1].split('.')[0]+'.png',img_poly )
                     except:
