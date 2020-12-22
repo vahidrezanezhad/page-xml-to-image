@@ -32,6 +32,7 @@ class pagexml2img:
         """
         Listing all ground truth page xml files. All files are needed to have xml format.
         """
+        
 
         gt_all=os.listdir(self.dir)
         self.gt_list=[file for file in gt_all if file.split('.')[ len(file.split('.'))-1 ]=='xml' ]
